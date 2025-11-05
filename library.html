@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Webcomic Library</title>
+<style>
+body { margin:0; font-family:sans-serif; background:#111; color:#eee; }
+h1 { text-align:center; margin-top:20px; }
+.library { display:flex; flex-wrap:wrap; justify-content:center; padding:20px; }
+.card { background:#222; border:2px solid #444; border-radius:8px; padding:20px; margin:10px; cursor:pointer; width:200px; text-align:center; transition:0.3s; }
+.card:hover { border-color:#1b7; }
+</style>
+</head>
+<body>
+
+<h1>Webcomic Library</h1>
+<div class="library" id="library"></div>
+
+<script>
+async function loadLibrary(){
+  const container = document.getElementById("library");
+  const res = await fetch("webcomics/manifest.json");
+  const data = await res.json();
+
+  Object.values(data).forEach(comic => {
+    const card = document.createElement("div");
+    card.className="card";
+    card.textContent = comic.title;
+    card.onclick = () => {
+      window.location.href = "index.html?comic=" + encodeURIComponent(comic.title);
+    };
+    container.appendChild(card);
+  });
+}
+
+loadLibrary();
+</script>
+
+</body>
+</html>

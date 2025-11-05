@@ -94,6 +94,11 @@ const sideMenu = document.getElementById("side-menu");
 const sidebarToggle = document.getElementById("sidebar-toggle");
 const readerContainer = document.getElementById("reader-container");
 
+const params = new URLSearchParams(window.location.search);
+const comicParam = params.get("comic");
+
+if(!comicParam){ window.location.href="library.html"; }
+
 /* ---------- UTIL ---------- */
 function safeFolderName(name){ return name.replace(/\s+/g,"_"); }
 function key(series,index){ return `${SAVE_KEY}-${series}-ch${index}`; }
@@ -164,49 +169,36 @@ window.addEventListener("keydown",(e)=>{
 function highlightSideMenu(){
   const buttons = sideMenu.querySelectorAll("button.chapter-btn");
   buttons.forEach(btn=>btn.classList.remove("current"));
-  const currentBtn = sideMenu.querySelector(`button[data-series="${currentSeries}"][data-index="${currentChapterIndex}"]`);
+  const currentBtn = sideMenu.querySelector(`button[data-index="${currentChapterIndex}"]`);
   if(currentBtn) currentBtn.classList.add("current");
 }
 
-function buildSideMenu(){
+function buildSideMenu(seriesKey){
   sideMenu.innerHTML="";
-  for(const seriesKey in WEBCOMICS){
-    const s = WEBCOMICS[seriesKey];
+  const s = WEBCOMICS[seriesKey];
 
-    const header = document.createElement("div");
-    header.className="webcomic-header";
+  const header = document.createElement("div");
+  header.className="webcomic-header";
 
-    const title = document.createElement("h3");
-    title.textContent=s.title;
+  const title = document.createElement("h3");
+  title.textContent=s.title;
+  header.appendChild(title);
+  sideMenu.appendChild(header);
 
-    const toggleBtn = document.createElement("button");
-    toggleBtn.className="toggle-chapters";
-    toggleBtn.textContent="▼";
-    toggleBtn.onclick = ()=>{
-      list.classList.toggle("collapsed");
-      toggleBtn.textContent = list.classList.contains("collapsed") ? "▶" : "▼";
-    };
+  const list = document.createElement("div");
+  list.className="chapter-list";
 
-    header.appendChild(title);
-    header.appendChild(toggleBtn);
-    sideMenu.appendChild(header);
+  s.chapters.forEach((chapterName,index)=>{
+    const btn=document.createElement("button");
+    btn.className="chapter-btn";
+    if(isChapterRead(seriesKey,index)) btn.classList.add("read");
+    btn.textContent=chapterName;
+    btn.dataset.index=index;
+    btn.onclick=()=>openChapter(seriesKey,index);
+    list.appendChild(btn);
+  });
 
-    const list = document.createElement("div");
-    list.className="chapter-list";
-
-    s.chapters.forEach((chapterName,index)=>{
-      const btn=document.createElement("button");
-      btn.className="chapter-btn";
-      if(isChapterRead(seriesKey,index)) btn.classList.add("read");
-      btn.textContent=chapterName;
-      btn.dataset.series=seriesKey;
-      btn.dataset.index=index;
-      btn.onclick=()=>openChapter(seriesKey,index);
-      list.appendChild(btn);
-    });
-
-    sideMenu.appendChild(list);
-  }
+  sideMenu.appendChild(list);
 }
 
 /* ---------- COLLAPSE SIDEBAR ---------- */
@@ -233,6 +225,7 @@ async function loadWebcomicsManifest(){
     const res = await fetch("webcomics/manifest.json");
     const data = await res.json();
 
+    // Sort chapters numerically
     for(const series in data){
       data[series].chapters.sort((a,b)=>{
         const na=parseInt(a.match(/\d+/))||0;
@@ -242,11 +235,13 @@ async function loadWebcomicsManifest(){
     }
 
     WEBCOMICS = data;
-    buildSideMenu();
+    buildSideMenu(comicParam);
+
+    // Open first chapter by default
+    openChapter(comicParam,0);
   }catch(err){ console.error("Failed to load manifest.json:",err);}
 }
 
-/* ---------- START ---------- */
 loadWebcomicsManifest();
 </script>
 
