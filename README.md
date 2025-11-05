@@ -30,7 +30,7 @@ To run the server
 
 An all in one command to copy the Repo, open it, and then directly run the server.
 ```
-git clone https://github.com/DavTo20/WebcomicReader
+git clone http://github.com/DavTo20/WebcomicReader
 cd ~/WebcomicReader
 mkdir webcomics
 python3 -m https.server 8080
