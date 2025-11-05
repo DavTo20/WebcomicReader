@@ -13,7 +13,8 @@ This does not include any webcomics but if you get your hands on the raw data of
 
 # Disclaimer
 
-This tool does not provide any copyrighted material. Preferably used by artists to test how their work flows from png to png. 
+This tool does not provide any copyrighted material. Preferably used by artists to test how their work flows from png to png. ]
+
 
 # How to use
 
@@ -34,6 +35,18 @@ git clone https://github.com/DavTo20/WebcomicReader
 cd ~/WebcomicReader
 mkdir webcomics
 python3 -m http.server 8080
+```
+
+### Windows one liner setup
+
+1. Install [Python 3](https://www.python.org/downloads/) and [Git](https://git-scm.com/download/win)
+2. Open PowerShell and run:
+
+```powershell
+git clone https://github.com/DavTo20/WebcomicReader
+cd WebcomicReader
+mkdir webcomics
+python -m http.server 8080
 ```
 
 ## Directory Structure
