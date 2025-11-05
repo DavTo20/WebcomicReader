@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Webcomic Reader - Collapsible Sidebar</title>
+<style>
+body { margin:0; font-family:sans-serif; background:#111; color:#eee; }
+
+/* ---------------- SIDEBAR ---------------- */
+#side-menu {
+  position:fixed; left:0; top:0; width:250px; height:100%;
+  background:#222; overflow-y:auto; padding:10px; box-sizing:border-box;
+  border-right:2px solid #444; transition: transform 0.3s;
+}
+#side-menu.collapsed { transform: translateX(-250px); }
+
+#sidebar-toggle {
+  position:fixed; left:250px; top:10px;
+  background:#1b7; color:#111; border:none; padding:5px 10px; cursor:pointer;
+  z-index:1000; transition: left 0.3s;
+}
+#sidebar-toggle.collapsed { left:0; }
+
+.webcomic-header {
+  display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin:10px 0 5px;
+}
+.webcomic-header h3 { margin:0; font-size:1em; color:#1b7; }
+.webcomic-header button.toggle-chapters { background:none; border:none; color:#fff; font-size:1em; cursor:pointer; }
+
+.chapter-list { margin:0 0 10px; padding-left:10px; }
+.chapter-list.collapsed { display:none; }
+
+button.chapter-btn {
+  display:block; width:100%; text-align:left; margin:2px 0;
+  padding:5px 10px; border:none; background:#333; color:#fff; border-radius:4px;
+  cursor:pointer;
+}
+button.chapter-btn.read { background:#1b7; color:#111; }
+button.chapter-btn.current { border:1px solid #fff; }
+
+/* ---------------- READER ---------------- */
+#reader-container { margin-left:260px; padding:20px; transition: margin-left 0.3s; }
+#reader-container.full { margin-left:10px; }
+
+img { display:block; margin:0 auto; max-width:800px; width:100%; }
+
+/* ---------------- SAVE POPUP ---------------- */
+#save-popup {
+  position:fixed; bottom:20px; right:20px;
+  background:#4f4; color:#111;
+  padding:10px 20px; border-radius:8px;
+  opacity:0; transition:opacity .3s;
+}
+
+/* ---------------- NEXT CHAPTER ARROW ---------------- */
+#next-arrow {
+  position:fixed; bottom:30px; right:50%;
+  transform: translateX(50%);
+  font-size:2em; color:#fff;
+  display:none;
+  opacity:0.8;
+  cursor:pointer;
+  animation: bounce 1s infinite;
+}
+@keyframes bounce {
+  0%,20%,50%,80%,100% { transform: translateX(50%) translateY(0); }
+  40% { transform: translateX(50%) translateY(-10px); }
+  60% { transform: translateX(50%) translateY(-5px); }
+}
+</style>
+</head>
+<body>
+
+<button id="sidebar-toggle">☰</button>
+<div id="side-menu"></div>
+
+<div id="reader-container">
+  <div id="container"></div>
+  <div id="save-popup">Progress Saved!</div>
+  <div id="next-arrow" onclick="nextChapter()">⬇</div>
+</div>
+
+<script>
+const DIGITS=3;
+const SAVE_KEY="webcomic-progress";
+let WEBCOMICS = {};
+let currentSeries = null;
+let currentChapterIndex = 0;
+
+const container = document.getElementById("container");
+const savePopup = document.getElementById("save-popup");
+const nextArrow = document.getElementById("next-arrow");
+const sideMenu = document.getElementById("side-menu");
+const sidebarToggle = document.getElementById("sidebar-toggle");
+const readerContainer = document.getElementById("reader-container");
+
+/* ---------- UTIL ---------- */
+function safeFolderName(name){ return name.replace(/\s+/g,"_"); }
+function key(series,index){ return `${SAVE_KEY}-${series}-ch${index}`; }
+function isChapterRead(series,index){ return !!localStorage.getItem(key(series,index)); }
+
+/* ---------- PROGRESS ---------- */
+function saveProgress(){
+  const data={scrollY:window.scrollY};
+  localStorage.setItem(key(currentSeries,currentChapterIndex),JSON.stringify(data));
+  savePopup.style.opacity="1";
+  clearTimeout(savePopup._timeout);
+  savePopup._timeout=setTimeout(()=>savePopup.style.opacity="0",1000);
+}
+
+function restoreProgress(){
+  const data=localStorage.getItem(key(currentSeries,currentChapterIndex));
+  if(!data) return;
+  try{ const {scrollY}=JSON.parse(data); setTimeout(()=>window.scrollTo(0,scrollY||0),300);}catch{}
+}
+
+/* ---------- LOAD CHAPTER ---------- */
+function getChapterFolder(){ return safeFolderName(WEBCOMICS[currentSeries].chapters[currentChapterIndex]); }
+
+async function loadFullChapter(){
+  container.innerHTML="";
+  nextArrow.style.display="none";
+
+  let i=1; let lastExists=true;
+  while(lastExists){
+    const img=document.createElement("img");
+    img.src = `webcomics/${safeFolderName(currentSeries)}/${getChapterFolder()}/${String(i).padStart(DIGITS,"0")}.png`;
+    await new Promise(r=>{
+      img.onload=()=>r();
+      img.onerror=()=>{ lastExists=false; r(); };
+    });
+    if(lastExists) container.appendChild(img);
+    i++;
+  }
+
+  if(container.children.length===0){
+    console.warn(`No images found in folder: ${safeFolderName(currentSeries)}/${getChapterFolder()}`);
+    nextArrow.style.display="block";
+  }
+}
+
+/* ---------- OPEN / NEXT CHAPTER ---------- */
+function openChapter(series,index){
+  currentSeries=series;
+  currentChapterIndex=index;
+  loadFullChapter();
+  restoreProgress();
+  highlightSideMenu();
+}
+
+function nextChapter(){
+  const series = WEBCOMICS[currentSeries];
+  if(currentChapterIndex+1 < series.chapters.length){
+    openChapter(currentSeries,currentChapterIndex+1);
+  } else { alert("Reached last chapter!"); }
+}
+
+/* ---------- KEYBOARD NAV ---------- */
+window.addEventListener("keydown",(e)=>{
+  if(e.key==="ArrowRight") nextChapter();
+});
+
+/* ---------- SIDE MENU ---------- */
+function highlightSideMenu(){
+  const buttons = sideMenu.querySelectorAll("button.chapter-btn");
+  buttons.forEach(btn=>btn.classList.remove("current"));
+  const currentBtn = sideMenu.querySelector(`button[data-series="${currentSeries}"][data-index="${currentChapterIndex}"]`);
+  if(currentBtn) currentBtn.classList.add("current");
+}
+
+function buildSideMenu(){
+  sideMenu.innerHTML="";
+  for(const seriesKey in WEBCOMICS){
+    const s = WEBCOMICS[seriesKey];
+
+    const header = document.createElement("div");
+    header.className="webcomic-header";
+
+    const title = document.createElement("h3");
+    title.textContent=s.title;
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.className="toggle-chapters";
+    toggleBtn.textContent="▼";
+    toggleBtn.onclick = ()=>{
+      list.classList.toggle("collapsed");
+      toggleBtn.textContent = list.classList.contains("collapsed") ? "▶" : "▼";
+    };
+
+    header.appendChild(title);
+    header.appendChild(toggleBtn);
+    sideMenu.appendChild(header);
+
+    const list = document.createElement("div");
+    list.className="chapter-list";
+
+    s.chapters.forEach((chapterName,index)=>{
+      const btn=document.createElement("button");
+      btn.className="chapter-btn";
+      if(isChapterRead(seriesKey,index)) btn.classList.add("read");
+      btn.textContent=chapterName;
+      btn.dataset.series=seriesKey;
+      btn.dataset.index=index;
+      btn.onclick=()=>openChapter(seriesKey,index);
+      list.appendChild(btn);
+    });
+
+    sideMenu.appendChild(list);
+  }
+}
+
+/* ---------- COLLAPSE SIDEBAR ---------- */
+sidebarToggle.onclick = ()=>{
+  sideMenu.classList.toggle("collapsed");
+  sidebarToggle.classList.toggle("collapsed");
+  readerContainer.classList.toggle("full");
+};
+
+/* ---------- SCROLL SAVE ---------- */
+window.addEventListener("scroll",()=>{
+  clearTimeout(window._saveT);
+  window._saveT = setTimeout(saveProgress,400);
+
+  const scrollY = window.scrollY + window.innerHeight;
+  const docHeight = document.body.scrollHeight;
+  if(scrollY >= docHeight - 100){ nextArrow.style.display = "block"; } 
+  else { nextArrow.style.display = "none"; }
+});
+
+/* ---------- LOAD MANIFEST ---------- */
+async function loadWebcomicsManifest(){
+  try{
+    const res = await fetch("webcomics/manifest.json");
+    const data = await res.json();
+
+    for(const series in data){
+      data[series].chapters.sort((a,b)=>{
+        const na=parseInt(a.match(/\d+/))||0;
+        const nb=parseInt(b.match(/\d+/))||0;
+        return na-nb;
+      });
+    }
+
+    WEBCOMICS = data;
+    buildSideMenu();
+  }catch(err){ console.error("Failed to load manifest.json:",err);}
+}
+
+/* ---------- START ---------- */
+loadWebcomicsManifest();
+</script>
+
+</body>
+</html>
