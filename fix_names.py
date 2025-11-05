@@ -24,13 +24,12 @@ def rename_images(chapter_dir):
         new_name = f"{i:03d}.png"
         new_path = chapter_dir / new_name
         if new_path != img:
-           # print(f"  Renaming image: {img.name} -> {new_name}")
+            print(f"  Renaming image: {img.name} -> {new_name}")
             img.rename(new_path)
 
 def rename_chapters(series_path):
     chapters = [d for d in series_path.iterdir() if d.is_dir()]
     
-    # Sort by season then episode
     chapters.sort(key=lambda d: extract_season_episode(d.name))
 
     for i, chapter_dir in enumerate(chapters, start=1):
