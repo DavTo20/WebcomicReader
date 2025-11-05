@@ -1,6 +1,6 @@
 # What it is
 
-Webcomic reader is a lightweight and self-hosted webcomic server that you can acess locally.
+Webcomic reader is a lightweight and self-hosted webcomic server that you can access locally.
 This does not include any webcomics but if you get your hands on the raw data of one preferably in a chapter format, this is the perfect tool to read them with.
 
 # Features
